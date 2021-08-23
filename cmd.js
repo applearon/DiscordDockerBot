@@ -58,7 +58,7 @@ client.on('message', msg => {
                         msg.channel.send("```\nNo Output.```")
                         return;
                     } else {
-                    console.log(stdout.length)
+                    //console.log(stdout.length)
                     const height =  stdout.split(/\r\n|\r|\n/)
                     const trulength = Math.max(...(height.map(el => el.length)));
                     const canvas = createCanvas(50+trulength*20, 50+(height.length-1)*40);

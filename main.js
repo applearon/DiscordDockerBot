@@ -6,6 +6,7 @@ const cmd = require("./cmd.js");
 const figlet = require('./figlet.js');
 const info = require('./info.js');
 const dockerinit = require('./dockerinit.js');
+const help = require('./help.js');
 //const chgprefix = require('./prefix.js');
 
 client.on('ready', () => {
@@ -16,6 +17,7 @@ cmd(client, prefix);
 figlet(client, prefix);
 info(client, prefix);
 dockerinit(client, prefix);
+help(client, prefix);
 //chgprefix(client, prefix);
 
 client.login(process.env.TOKEN);
