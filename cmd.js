@@ -1,83 +1,81 @@
 const { exec } = require("child_process");
-const { createCanvas} = require('canvas')
 const Discord = require('discord.js');
+var util = require('util')
+var Docker = require('dockerode');
+var docker = new Docker();
+const { createCanvas} = require('canvas')
 
-function cmd(client, prefix) {
+
+function newcmd(client, prefix) {
 client.on('message', msg => {
     if (msg.content.toLowerCase().startsWith(prefix + 'cmd')) {
-        let text = msg.content.substr(msg.content.indexOf(" ") + 1);
-        exec(`docker container ls -q -f name=${msg.guild.id}`, (errore, stdoute, stderre) => {
+      let text = msg.content.substr(msg.content.indexOf(" ") + 1);
+      exec(`docker container ls -q -f name=${msg.guild.id}`, (errore, stdoute, stderre) => {
         if (stdoute.length === 0) {
                 msg.channel.send("```\n" + `Container Not initialized! type ${prefix}init to initalize.` + "```")
         } else if (text.toLowerCase() === prefix + "cmd") {
-            exec(`docker run --rm archlinux echo "Usage: ${prefix}cmd {LINUX/BASH COMMAND}"`, (error, output, stderr) => {
-                msg.channel.send("```" + output + "```");
-            });
+                msg.channel.send("```" + `Usage: ${prefix}cmd {LINUX/BASH COMMAND}` + "```");
         } else {
-                let command = text.replace(`'`, `"`);
-                let docker = `docker exec ${msg.guild.id} sh -c '${command}'`;
-                exec(docker, (error, stdout, stderr) => {
-                    if (error) {
-                        if (error.message === "stderr maxBuffer length exceeded") {
-                            msg.channel.send("```\nMessage output is too large.```");
-                            return;
-                        } else {
-                        const height =  error.message.split(/\r\n|\r|\n/)
-                        const trulength = Math.max(...(height.map(el => el.length)));
-                        const canvas = createCanvas(50+trulength*20, 50+(height.length-1)*40);
-                        const ctx = canvas.getContext('2d')
-                        ctx.fillStyle = "Black";
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.font = '30px Mono'
-                        ctx.fillStyle = "White";
-                        ctx.fillText(error.message, 25, 50)
-                        //console.log(canvas.toDataURL())
-                        console.log(error);
-                        const attachment = new Discord.MessageAttachment(canvas.toBuffer(), 'output.png');
-                        msg.channel.send(attachment);           
-                        return;
-                    }}
-                    if (stderr) {
-                    const height =  stderr.split(/\r\n|\r|\n/)
-                    const trulength = Math.max(...(height.map(el => el.length)));
-                    const canvas = createCanvas(50+trulength*20, 50+(height.length-1)*40);
-                    const ctx = canvas.getContext('2d')
-                    ctx.fillStyle = "Black";
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.font = '30px Mono'
-                    ctx.fillStyle = "White";
-                    ctx.fillText(stderr, 25, 50)
-                    //console.log(canvas.toDataURL())
-                    const attachment = new Discord.MessageAttachment(canvas.toBuffer(), 'output.png');
-                    msg.channel.send(attachment);       
-                        return;
-                    }
-                    if (stdout) {
-                    //msg.channel.send("```\n" + stdout + "```");
-                    if (stdout.length <= 1) {
-                        msg.channel.send("```\nNo Output.```")
-                        return;
-                    } else {
-                    //console.log(stdout.length)
-                    const height =  stdout.split(/\r\n|\r|\n/)
-                    const trulength = Math.max(...(height.map(el => el.length)));
-                    const canvas = createCanvas(50+trulength*20, 50+(height.length-1)*40);
-                    const ctx = canvas.getContext('2d')
-                    ctx.fillStyle = "Black";
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.font = '30px Mono'
-                    ctx.fillStyle = "White";
-                    ctx.fillText(stdout, 25, 50)
-                    //console.log(canvas.toDataURL())
-                    const attachment = new Discord.MessageAttachment(canvas.toBuffer(), 'output.png');
-                    msg.channel.send(attachment);
-                    return;   
-                    };
-                    }
-                });        
+      try {
+      //create their CMD
+      var options = {
+        Cmd: ['/usr/bin/timeout', '30s', '/bin/sh', '-c', `${text}`],
+        Env: ['TERM=dumb'],
+        AttachStdout: true,
+        AttachStderr: true
+      };    
+      async function test() {
+        const containers = await docker.listContainers();
+        const names = containers.filter(it => it.Names[0] === `/${msg.guild.id}`);
+        //console.log(names)
+        container = docker.getContainer(names[0].Id)
+        await container.exec(options, function(err, exec) {
+            exec.start(function(err, stream) {
+                //stream.pipe(process.stdout);
+                let output = [];
+                
+                stream.on("data", (cb) => {
+                  cb = String(cb).substr(8);
+                  if (output.length < 100) {
+                  output.push(cb);
+                  }
+                })
+                stream.on("end", () => {
+                  output = output.join('');
+                  colours = output.split('\e[');
+                  //console.log(colours);
+                  var height =  output.split(/\r\n|\r|\n/)
+                  if (height.length > 100000 || output.length > 10000) {
+                      output = "Output too large.\n";
+                      height =  output.split(/\r\n|\r|\n/);
+                  }
+                  const trulength = Math.max(...(height.map(el => el.length)));
+                  const canvas = createCanvas(50+trulength*20, 50+(height.length-1)*40);
+                  const ctx = canvas.getContext('2d')
+                  ctx.fillStyle = "Black";
+                  ctx.fillRect(0, 0, canvas.width, canvas.height);
+                  ctx.font = '30px Mono'
+                  ctx.fillStyle = "White";
+                  ctx.fillText(output, 25, 50)
+                  //console.log(canvas.toDataURL())
+                  const attachment = new Discord.MessageAttachment(canvas.toBuffer(), 'output.png');
+                  msg.channel.send(attachment);
+                 // msg.channel.send(output.normalize());
+                  //console.log(output.normalize());
+                  //console.log(output.length);
+                  return;   
+                })
+                //Docker.getContainer(names[0].Id).modem.demuxStream(stream, stdout, process.stderr);
+            })
+        });
+        
+        };
+        test();        
+    } catch (error) {
+      msg.channel.send("```\nSomething went wrong :/\nError:"+ error)
     }
-    })
-      }    
+  }});
+      }
 });
 }
-module.exports = cmd
+module.exports = newcmd
