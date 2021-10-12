@@ -11,4 +11,9 @@ Then run `node main.js`
 
 
 **Node Dependencies:**
-`npm i dotenv`
+`npm i dotenv`,
+
+**Other Dependancies**
+You need docker installed on your system. Look [here](https://docs.docker.com/get-docker/) for distro-specific information.
+
+**Note**: This has only been tested on linux systems, and likely will not run on windows or macOS.
