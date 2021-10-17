@@ -11,7 +11,7 @@ Then run `node main.js`
 
 
 **Node Dependencies:**
-`npm i dotenv`,
+`npm i canvas discord.js@12.5.3 dotenv dockerode`,
 
 **Other Dependancies**
 You need docker installed on your system. Look [here](https://docs.docker.com/get-docker/) for distro-specific information.
